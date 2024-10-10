@@ -7,7 +7,7 @@ import numpy as np
 # import requests 
 
 # Reading image form url
-img = Image.open('./carpark2.png')
+img = Image.open('./carpark4.png')
 img = img.resize((450,250)) # ensure that any image is resized to a standard size
 #img.show() - test loading the image (load successful)
 
@@ -35,6 +35,14 @@ cascade_source = './cars.xml' # source of the cascade file. is a pre trained mod
 car_cascade = cv2.CascadeClassifier(cascade_source)
 cars = car_cascade.detectMultiScale(final_img, 1.0999, 1) # detects any size of car. Scale factor, min neighbours. The higher the scale factor, the less cars detected. 
 print(len(cars))
+
+
+for (x,y,w,h) in cars:
+  cv2.rectangle(img_array,(x,y),(x+w,y+h),(255,0,0),2) # draw a rectangle around the car
+
+pl_image = Image.fromarray(img_array)
+pl_image.show() # show the image with the rectangle around the car
+
 
 
 
