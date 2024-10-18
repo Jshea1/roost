@@ -7,7 +7,7 @@ import numpy as np
 # import requests 
 
 # Reading image form url
-img = Image.open('./carpark3.png')
+img = Image.open('./carpark2.png')
 img = img.resize((450,250)) # ensure that any image is resized to a standard size
 #img.show() - test loading the image (load successful)
 
@@ -15,6 +15,7 @@ img_array = np.array(img)
 #print(img_array) - printed successfully
 
 img_gray = cv2.cvtColor(img_array,cv2.COLOR_BGR2GRAY) # convert to gray scale
+#img_gray = cv2.equalizeHist(img_gray)
 #pil_image = Image.fromarray(img_gray)
 #pil_image.show() - Successful gray code image produced
 
@@ -33,7 +34,8 @@ final_img = cv2.morphologyEx(img_dilated, cv2.MORPH_CLOSE, kernel)
 
 cascade_source = './haarcascade_car.xml' # source of the cascade file. is a pre trained model, can be changed if results are not good
 car_cascade = cv2.CascadeClassifier(cascade_source)
-cars = car_cascade.detectMultiScale(final_img, 1.09, 2) # detects any size of car. Scale factor, min neighbours. The higher the scale factor, the less cars detected. 
+cars = car_cascade.detectMultiScale(final_img, scaleFactor=1.05, minNeighbors=2, minSize=(40, 40))
+ # detects any size of car. Scale factor, min neighbours. The higher the scale factor, the less cars detected. 
 print(len(cars))
 
 
