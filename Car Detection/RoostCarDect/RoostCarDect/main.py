@@ -1,52 +1,28 @@
-# source - https://youtu.be/m5ituNiReEw
-# test push
-# Import libraries
-from PIL import Image
 import cv2
-import numpy as np
-# import requests 
+import torch
 
-# Reading image form url
-img = Image.open('./carpark2.png')
-img = img.resize((450,250)) # ensure that any image is resized to a standard size
-#img.show() - test loading the image (load successful)
+# Load the YOLOv5 model
+model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
 
-img_array = np.array(img)
-#print(img_array) - printed successfully
-
-img_gray = cv2.cvtColor(img_array,cv2.COLOR_BGR2GRAY) # convert to gray scale
-#img_gray = cv2.equalizeHist(img_gray)
-#pil_image = Image.fromarray(img_gray)
-#pil_image.show() - Successful gray code image produced
-
-img_blur = cv2.GaussianBlur(img_gray,(5,5),0) # de noise. 5,5 is the kernel size, 0 is the sigma value
-#pil_image = Image.fromarray(img_blur)
-#pil_image.show() - Successful de noise
-
-img_dilated = cv2.dilate(img_blur,np.ones((3,3))) # dilate the image. 
-#pil_image = Image.fromarray(img_dilated)
-#pil_image.show() - checked
-
-kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2, 2)) # create a kernel. 
-final_img = cv2.morphologyEx(img_dilated, cv2.MORPH_CLOSE, kernel) 
-#pil_image = Image.fromarray(final_img)
-#pil_image.show() - checked
-
-cascade_source = './haarcascade_car.xml' # source of the cascade file. is a pre trained model, can be changed if results are not good
-car_cascade = cv2.CascadeClassifier(cascade_source)
-cars = car_cascade.detectMultiScale(final_img, scaleFactor=1.05, minNeighbors=2, minSize=(40, 40))
- # detects any size of car. Scale factor, min neighbours. The higher the scale factor, the less cars detected. 
-print(len(cars))
+# Load your image
+img_path = './carpark6.png'
+img = cv2.imread(img_path)
+img_resized = cv2.resize(img, (450, 250))
 
 
-for (x,y,w,h) in cars:
-  cv2.rectangle(img_array,(x,y),(x+w,y+h),(144,238,144),2) # draw a rectangle around the car.
+# Convert the image to RGB (YOLOv5 expects images in RGB format)
+img_rgb = cv2.cvtColor(img_resized, cv2.COLOR_BGR2RGB)
 
-pl_image = Image.fromarray(img_array)
-pl_image.show() # show the image with the rectangle around the car
+# Perform inference
+results = model(img_rgb)
 
+# Print the results (coordinates, labels, confidence scores)
+print(results.pandas().xyxy[0])  # Pandas DataFrame with results
 
+# Draw bounding boxes and labels on the image
+results.render()
 
-
-
-
+# Save or display the result
+cv2.imshow('YOLOv5 Detection', results.ims[0])
+cv2.waitKey(0)  # Press any key to close the window
+cv2.destroyAllWindows()
