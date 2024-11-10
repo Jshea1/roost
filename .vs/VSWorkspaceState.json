@@ -1,7 +1,10 @@
 {
   "ExpandedNodes": [
-    ""
+    "",
+    "\\Car Detection",
+    "\\Car Detection\\RoostCarDect",
+    "\\Car Detection\\RoostCarDect\\RoostCarDect"
   ],
-  "SelectedNode": "\\RoostCarDect.sln",
+  "SelectedNode": "\\Car Detection\\RoostCarDect\\RoostCarDect\\AnonTest.py",
   "PreviewInSolutionExplorer": false
 }
