@@ -11,7 +11,7 @@ model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
 # Load your image
 #img_path = './CamTest1.png'
 img = cv2.imread(img_path) 
-img_resized = cv2.resize(img, (2550, 540))
+img_resized = cv2.resize(img, (2560, 540))
 
 # Convert the image to RGB (YOLOv5 expects images in RGB format)
 img_rgb = cv2.cvtColor(img_resized, cv2.COLOR_BGR2RGB)
