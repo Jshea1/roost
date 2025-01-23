@@ -3,7 +3,7 @@ import os
 import torch
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
-img_path = os.path.join(script_dir, 'CamTest5.png')
+img_path = os.path.join(script_dir, 'CamTest7.png')
 
 # Load the YOLOv5 model for vehicle detection
 model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
