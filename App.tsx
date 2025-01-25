@@ -5,7 +5,7 @@ function App(): React.JSX.Element {
   return (
     <SafeAreaView style={styles.container}>
       <View>
-        <Text style={styles.text}>ROOST app</Text>
+        <Text style={styles.text}>ROOST app!!!</Text>
       </View>
     </SafeAreaView>
   );
