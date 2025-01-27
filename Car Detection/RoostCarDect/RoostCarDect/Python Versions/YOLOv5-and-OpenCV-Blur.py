@@ -3,7 +3,7 @@ import os
 import torch
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
-img_path = os.path.join(script_dir, 'CamTest7.png')
+img_path = os.path.join(script_dir, 'CamTest.png')
 
 # Load the YOLOv5 model for vehicle detection
 model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
@@ -11,7 +11,7 @@ model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
 # Load your image
 #img_path = './CamTest1.png'
 img = cv2.imread(img_path) 
-img_resized = cv2.resize(img, (2560, 540))
+img_resized = cv2.resize(img, (2550, 540))
 
 # Convert the image to RGB (YOLOv5 expects images in RGB format)
 img_rgb = cv2.cvtColor(img_resized, cv2.COLOR_BGR2RGB)
@@ -62,8 +62,6 @@ print(f"Total license plates detected: {plate_count}")
 print(f"Total faces detected: {face_count}")
 
 # Display the result
-cv2.namedWindow('Detection with Blurred Faces and Plates', cv2.WINDOW_NORMAL)
 cv2.imshow('Detection with Blurred Faces and Plates', img_resized)
-cv2.resizeWindow('Detection with Blurred Faces and Plates', 1280, 720)
-cv2.waitKey(0)
+cv2.waitKey(0)  # Press any key to close the window
 cv2.destroyAllWindows()

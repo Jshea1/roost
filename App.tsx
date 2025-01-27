@@ -4,6 +4,7 @@ import { SafeAreaView, Text, StyleSheet, View } from 'react-native';
 function App(): React.JSX.Element {
   return (
     <SafeAreaView style={styles.container}>
+
       <View style={styles.row}>
         <View style={styles.box}>
           <Text style={styles.boxText}>Space 1</Text>
@@ -35,6 +36,7 @@ function App(): React.JSX.Element {
         <View style={styles.box}>
           <Text style={styles.boxText}>Space 8</Text>
         </View>
+
       </View>
     </SafeAreaView>
   );
