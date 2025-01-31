@@ -62,7 +62,7 @@ while True:
     print(f"Detected {vehicle_count} vehicles.")
 
     #  Update Google Sheets 
-    sheet.update("A1", [["Vehicle Count"], [vehicle_count]])  # Write data to A1
+    sheet.update(range_name="A1", values=[["Vehicle Count"], [vehicle_count]]) # Write data to A1
     print("Vehicle count successfully updated in Google Sheets.")
 
     for index, row in detections.iterrows():
