@@ -74,4 +74,4 @@ yarn-error.log
 !.yarn/sdks
 !.yarn/versions
 
-**/config.json
+**/test1roost-0c848c46550d.json
