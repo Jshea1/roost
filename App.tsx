@@ -1,72 +1,23 @@
 import React from 'react';
-import { SafeAreaView, Text, StyleSheet, View } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import HomeScreen from './screens/HomeScreen';
+import GoogleSheetsScreen from './screens/ParkingScreen';
 
-function App(): React.JSX.Element {
+export type RootStackParamList = {
+  Home: undefined;
+  GoogleSheets: undefined;
+};
+
+const Stack = createNativeStackNavigator<RootStackParamList>();
+
+export default function App(): React.JSX.Element {
   return (
-    <SafeAreaView style={styles.container}>
-
-      <View style={styles.row}>
-        <View style={styles.box}>
-          <Text style={styles.boxText}>Space 1</Text>
-        </View>
-        <View style={styles.box}>
-          <Text style={styles.boxText}>Space 2</Text>
-        </View>
-      </View>
-      <View style={styles.row}>
-        <View style={styles.box}>
-          <Text style={styles.boxText}>Space 3</Text>
-        </View>
-        <View style={styles.box}>
-          <Text style={styles.boxText}>Space 4</Text>
-        </View>
-      </View>
-      <View style={styles.row}>
-        <View style={styles.box}>
-          <Text style={styles.boxText}>Space 5</Text>
-        </View>
-        <View style={styles.box}>
-          <Text style={styles.boxText}>Space 6</Text>
-        </View>
-      </View>
-      <View style={styles.row}>
-        <View style={styles.box}>
-          <Text style={styles.boxText}>Space 7</Text>
-        </View>
-        <View style={styles.box}>
-          <Text style={styles.boxText}>Space 8</Text>
-        </View>
-
-      </View>
-    </SafeAreaView>
+    <NavigationContainer>
+      <Stack.Navigator initialRouteName="Home">
+        <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen name="GoogleSheets" component={GoogleSheetsScreen} />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f0f0f0',
-  },
-  row: {
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    marginBottom: 20, 
-  },
-  box: {
-    width: 125, 
-    height: 125, 
-    backgroundColor: '#4CAF50',
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    marginHorizontal: 10, 
-  },
-  boxText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-});
-
-export default App;
