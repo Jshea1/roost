@@ -1,0 +1,254 @@
+//this is just a visual representation of our UI it hasnt been integrated with the parking spot detection yet
+// want to replace the pins and make them interactable to display that lot's data
+//want to properly limit how far a user can scoll on the map 
+
+
+
+import React, { useState } from 'react';
+import { SafeAreaView, Text, StyleSheet, View, TouchableOpacity, Modal, Dimensions } from 'react-native';
+import MapView, { Marker } from 'react-native-maps';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+
+const Stack = createNativeStackNavigator();
+
+const parkingLots = [
+  {
+    id: 1,
+    name: 'Main Parking Lot',
+    coordinate: {
+      latitude: 40.7452,
+      longitude: -74.0239,
+    },
+    capacity: 200,
+    available: 45,
+  },
+  {
+    id: 2,
+    name: 'West Parking Garage',
+    coordinate: {
+      latitude: 40.7449,
+      longitude: -74.0248,
+    },
+    capacity: 300,
+    available: 120,
+  },
+];
+
+function HomeScreen({ navigation }) {
+  return (
+    <SafeAreaView style={styles.container}>
+      <Text style={styles.header}>ROOST</Text>
+      <View style={styles.grid}>
+        <TouchableOpacity 
+          style={styles.box}
+          onPress={() => navigation.navigate('Map')}
+        >
+          <Text style={styles.boxText}>Find Parking</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+function MapScreen() {
+  const [selectedLot, setSelectedLot] = useState(null);
+
+  
+  const mapBoundaries = {
+    northEast: {
+      latitude: 40.7470,   // Northmost point
+      longitude: -74.0220, // Eastmost point
+    },
+    southWest: {
+      latitude: 40.7420,   // Southmost point
+      longitude: -74.0270, // Westmost point
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <MapView
+        style={styles.map}
+        initialRegion={{
+          latitude: 40.7452,
+          longitude: -74.0239,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        }}
+        minZoomLevel={15}
+        maxZoomLevel={20}
+        mapPadding={{
+          top: 50,
+          right: 50,
+          bottom: 50,
+          left: 50
+        }}
+        region={{
+          latitude: 40.7452,
+          longitude: -74.0239,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        }}
+        onRegionChangeComplete={(region) => {
+          // Constrain latitude
+          let newLatitude = region.latitude;
+          if (region.latitude > mapBoundaries.northEast.latitude) {
+            newLatitude = mapBoundaries.northEast.latitude;
+          }
+          if (region.latitude < mapBoundaries.southWest.latitude) {
+            newLatitude = mapBoundaries.southWest.latitude;
+          }
+          
+          // Constrain longitude
+          let newLongitude = region.longitude;
+          if (region.longitude > mapBoundaries.northEast.longitude) {
+            newLongitude = mapBoundaries.northEast.longitude;
+          }
+          if (region.longitude < mapBoundaries.southWest.longitude) {
+            newLongitude = mapBoundaries.southWest.longitude;
+          }
+        }}
+        pitchEnabled={false}
+        rotateEnabled={false}
+        liteMode={false}
+        moveOnMarkerPress={false}
+      >
+        {parkingLots.map((lot) => (
+          <Marker
+            key={lot.id}
+            coordinate={lot.coordinate}
+            title={lot.name}
+            description={`Available: ${lot.available}/${lot.capacity}`}
+            onPress={() => setSelectedLot(lot)}
+          />
+        ))}
+      </MapView>
+
+      {selectedLot && (
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={!!selectedLot}
+          onRequestClose={() => setSelectedLot(null)}
+        >
+          <View style={styles.modalView}>
+            <Text style={styles.modalTitle}>{selectedLot.name}</Text>
+            <Text style={styles.modalText}>
+              Available Spaces: {selectedLot.available}/{selectedLot.capacity}
+            </Text>
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={() => setSelectedLot(null)}
+            >
+              <Text style={styles.modalButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </Modal>
+      )}
+    </View>
+  );
+}
+
+const App = () => {
+  return (
+    <NavigationContainer>
+      <Stack.Navigator>
+        <Stack.Screen 
+          name="Home" 
+          component={HomeScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen 
+          name="Map" 
+          component={MapScreen}
+          options={{ 
+            title: 'Parking Map',
+            headerStyle: {
+              backgroundColor: '#8B0000',
+            },
+            headerTintColor: '#fff',
+          }}
+        />
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f0f0f0',
+  },
+  header: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginVertical: 20,
+    color: '#8B0000',
+  },
+  grid: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: 20,
+  },
+  box: {
+    width: '80%',
+    aspectRatio: 2,
+    backgroundColor: '#8B0000',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 10,
+    elevation: 3,
+    alignSelf: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  boxText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+    textAlign: 'center',
+  },
+  map: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height,
+  },
+  modalView: {
+    position: 'absolute',
+    bottom: 0,
+    width: '100%',
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  modalText: {
+    fontSize: 16,
+    marginBottom: 15,
+  },
+  modalButton: {
+    backgroundColor: '#8B0000',
+    borderRadius: 10,
+    padding: 10,
+    elevation: 2,
+    alignItems: 'center',
+  },
+  modalButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+});
