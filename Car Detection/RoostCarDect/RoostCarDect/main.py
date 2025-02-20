@@ -3,35 +3,50 @@ import os
 import torch
 import json
 import gspread
+import time
 from google.oauth2.service_account import Credentials
 
-#  Camera Configuration 
-RTSP_URL = "rtsp://admin:2025@ROOST11@169.254.109.34:681/Streaming/channels/101"  # Replace with actual details
+# Camera Configuration
+RTSP_URL = "rtsp://admin:2025@ROOST11@169.254.109.34:681/Streaming/channels/103"  # Replace with actual details
+UPDATE_INTERVAL = 10  # Detect vehicles & update Google Sheets every 10 seconds
 
-#  Set up paths 
+# Set up paths
 script_dir = os.path.dirname(os.path.abspath(__file__))
 json_key_path = os.path.join(script_dir, 'test1roost-0c848c46550d.json')
 
-#  Load the YOLOv5 model for vehicle detection 
+# Load the YOLOv5 model for vehicle detection
 model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
 
-#  Google Sheets API Authentication 
+# Google Sheets API Authentication
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 creds = Credentials.from_service_account_file(json_key_path, scopes=SCOPES)
 client = gspread.authorize(creds)
 
-#  Open Google Sheet 
+# Open Google Sheet
 SPREADSHEET_ID = "1Kb-Vu3I1DIRUix-8swzzwJcqiEAkBGkW8JaDrD7r4bo"  # Replace with your actual spreadsheet ID
 sheet = client.open_by_key(SPREADSHEET_ID).sheet1  # Select the first sheet
 
-#  Open RTSP Video Stream 
+# Open RTSP Video Stream
 cap = cv2.VideoCapture(RTSP_URL)
 
 if not cap.isOpened():
     print("Error: Could not open video stream")
     exit()
 
-print("Processing video feed... Press 'q' to stop.")
+# Get actual video frame width and height
+frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+print(f"Stream resolution: {frame_width}x{frame_height}")
+
+# Set window properties to allow resizing
+cv2.namedWindow("Vehicle Detection", cv2.WINDOW_NORMAL)  # Make window resizable
+cv2.resizeWindow("Vehicle Detection", frame_width, frame_height) 
+
+print("Processing video feed at 12 FPS... Vehicle detection & Google Sheets updates every 10 seconds. Press 'q' to stop.")
+
+last_update_time = time.time()
+latest_vehicle_count = 0  # Store last detected vehicle count
 
 while True:
     ret, frame = cap.read()
@@ -40,38 +55,46 @@ while True:
         print("Failed to grab frame")
         break
 
-    # Resize for consistent YOLOv5 processing
-    img_resized = cv2.resize(frame, (2560, 540))
+    cv2.imshow("Vehicle Detection", frame)
 
-    # Convert to RGB (YOLOv5 expects RGB format)
-    img_rgb = cv2.cvtColor(img_resized, cv2.COLOR_BGR2RGB)
+    # Check if 10 seconds have passed before running detection
+    current_time = time.time()
+    if current_time - last_update_time >= UPDATE_INTERVAL:  
+        print(f"Running YOLOv5 detection after {UPDATE_INTERVAL} seconds.")
 
-    # Perform inference to detect vehicles
-    results = model(img_rgb)
-    detections = results.pandas().xyxy[0]  # x_min, y_min, x_max, y_max, confidence, class, name
+        # Resize for consistent YOLOv5 processing
+        img_resized = cv2.resize(frame, (2560, 540))  # Keep this for YOLO
 
-    # Count the number of vehicles detected (cars and trucks)
-    vehicle_count = int(detections[detections['name'].isin(['car', 'truck'])].shape[0])
+        # Convert to RGB (YOLOv5 expects RGB format)
+        img_rgb = cv2.cvtColor(img_resized, cv2.COLOR_BGR2RGB)
 
-    #  Save Detection Results to JSON 
-    detection_results = {"vehicle_count": vehicle_count}
-    json_output_path = os.path.join(script_dir, "detection_results.json")
-    with open(json_output_path, "w") as json_file:
-        json.dump(detection_results, json_file, indent=4)
+        # Perform inference to detect vehicles
+        results = model(img_rgb)
+        detections = results.pandas().xyxy[0]  # x_min, y_min, x_max, y_max, confidence, class, name
 
-    print(f"Detected {vehicle_count} vehicles.")
+        # Count the number of vehicles detected (cars and trucks)
+        latest_vehicle_count = int(detections[detections['name'].isin(['car', 'truck'])].shape[0])
 
-    #  Update Google Sheets 
-    sheet.update(range_name="A1", values=[["Vehicle Count"], [vehicle_count]]) # Write data to A1
-    print("Vehicle count successfully updated in Google Sheets.")
+        # Save Detection Results to JSON
+        detection_results = {"vehicle_count": latest_vehicle_count}
+        json_output_path = os.path.join(script_dir, "detection_results.json")
+        with open(json_output_path, "w") as json_file:
+            json.dump(detection_results, json_file, indent=4)
 
-    for index, row in detections.iterrows():
-        x_min, y_min, x_max, y_max = int(row['xmin']), int(row['ymin']), int(row['xmax']), int(row['ymax'])
-        # Draw the bounding box
-        cv2.rectangle(img_resized, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)  # Green bounding box
+        print(f"Detected {latest_vehicle_count} vehicles.")
 
-    # Display frame with detections
-    cv2.imshow("Vehicle Detection", img_resized)
+        # Draw Bounding Boxes
+        for index, row in detections.iterrows():
+            x_min, y_min, x_max, y_max = int(row['xmin']), int(row['ymin']), int(row['xmax']), int(row['ymax'])
+            cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)  # Green bounding box
+
+        cv2.imshow("Vehicle Detection", frame)
+
+        # Update Google Sheets only every 10 seconds
+        sheet.update(range_name="A1", values=[["Vehicle Count"], [latest_vehicle_count]])
+        print(f"Updated Google Sheets at {time.strftime('%H:%M:%S')}.")
+        
+        last_update_time = current_time  # Reset update timer
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
