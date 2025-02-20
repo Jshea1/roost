@@ -6,7 +6,7 @@ import GoogleSheetsScreen from './screens/ParkingScreen';
 
 export type RootStackParamList = {
   Home: undefined;
-  GoogleSheets: undefined;
+  AvailableParkingSpaces: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -16,7 +16,7 @@ export default function App(): React.JSX.Element {
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Home">
         <Stack.Screen name="Home" component={HomeScreen} />
-        <Stack.Screen name="GoogleSheets" component={GoogleSheetsScreen} />
+        <Stack.Screen name="AvailableParkingSpaces" component={GoogleSheetsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
