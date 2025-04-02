@@ -86,7 +86,7 @@ while True:
         # Draw Bounding Boxes
         for index, row in detections.iterrows():
             x_min, y_min, x_max, y_max = int(row['xmin']), int(row['ymin']), int(row['xmax']), int(row['ymax'])
-            cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)  # Green bounding box
+            cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)  
 
         cv2.imshow("Vehicle Detection", frame)
 
