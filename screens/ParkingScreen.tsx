@@ -17,7 +17,7 @@ const spotPositions = [
   { id: 54,  top: "32.75%",  left: "56.5%",  rotation: 0 },
   { id: 56,  top: "35.25%",  left: "56.5%",  rotation: 0 },
   { id: 58,  top: "38.35%",  left: "56.5%",  rotation: 0 },
-  { id: 80,  top: "41.4%",   left: "56.5%",  rotation: 0 },
+  { id: 60,  top: "41.4%",   left: "56.5%",  rotation: 0 },
   { id: 61,  top: "46.5%",   left: "56.5%",  rotation: 0 },
   { id: 62,  top: "48.95%",  left: "56.5%",  rotation: 0 },
   { id: 64,  top: "52%",     left: "56.5%",  rotation: 0 },
@@ -50,7 +50,7 @@ const spotPositions = [
 
   { id: 34,  top: "27.7%",   left: "23.75%", rotation: 0 },
   { id: 32,  top: "30.2%",   left: "23.75%", rotation: 0 },
-  { id: 21,  top: "32.75%",  left: "23.75%", rotation: 0 },
+  { id: 31,  top: "32.75%",  left: "23.75%", rotation: 0 },
   { id: 30,  top: "35.25%",  left: "23.75%", rotation: 0 },
   { id: 28,  top: "38.2%",   left: "23.75%", rotation: 0 },
   { id: 180, top: "41.4%",   left: "23.75%", rotation: 0 },
