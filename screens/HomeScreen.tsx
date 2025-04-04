@@ -22,10 +22,6 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
       style={styles.background}
     >
       <View style={styles.container}>
-        <Button 
-          title="View Available Parking Spaces" 
-          onPress={() => navigation.navigate('AvailableParkingSpaces')} 
-        />
 
         {/* Loop through pins */}
         {pins.map(pin => (
