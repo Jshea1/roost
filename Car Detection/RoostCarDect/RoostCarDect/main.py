@@ -6,6 +6,7 @@ import gspread
 import time
 from google.oauth2.service_account import Credentials
 
+
 # Camera Configuration
 RTSP_URL = "rtsp://admin:2025@ROOST11@169.254.109.34:681/Streaming/channels/103"  # Replace with actual details
 UPDATE_INTERVAL = 10  # Detect vehicles & update Google Sheets every 10 seconds
