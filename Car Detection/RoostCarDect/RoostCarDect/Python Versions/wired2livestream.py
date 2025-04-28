@@ -9,7 +9,7 @@ from google.oauth2.service_account import Credentials
 
 # Camera Configuration
 RTSP_URL = "rtsp://admin:2025@ROOST11@169.254.109.34:681/Streaming/channels/103"  # Replace with actual details
-UPDATE_INTERVAL = 10  # Detect vehicles & update Google Sheets every 10 seconds
+UPDATE_INTERVAL = 5  # Detect vehicles & update Google Sheets every 10 seconds
 
 # Set up paths
 script_dir = os.path.dirname(os.path.abspath(__file__))

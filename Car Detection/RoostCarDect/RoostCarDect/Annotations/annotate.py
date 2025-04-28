@@ -1,10 +1,11 @@
 import cv2
 import json
 import os
+import numpy as np
 
 # Path to your image and output JSON
-IMAGE   = "Annotations/test_img/CamTest3.png"
-OUTPUT  = "CamTest3.json"
+IMAGE   = "Annotations/cam_img/Spot_3/S3_180B.png"
+OUTPUT  = "Annotations/cam_img/Spot_3/S3_180B.json"
 
 polygons = []      # will hold multiple spot polygons
 current = []       # current spot being clicked
@@ -53,8 +54,24 @@ out_dir = os.path.dirname(OUTPUT)
 if out_dir and not os.path.exists(out_dir):
     os.makedirs(out_dir)
 
-# Write out all your polygons
-with open(OUTPUT, "w") as f:
-    json.dump({"polygons": polygons}, f, indent=2)
+# Convert to list of records with "polygon" keys
+records = [{"polygon": pts} for pts in polygons]
 
-print(f"Wrote {OUTPUT} with {len(polygons)} polygons.")
+# Write out all your polygons in the desired format
+with open(OUTPUT, "w") as f:
+    json.dump(records, f, indent=2)
+
+print(f"Wrote {OUTPUT} with {len(records)} polygon entries.")
+
+# reload the original image (so you don't get the little circles from the clicks)
+annotated = cv2.imread(IMAGE)
+
+# draw each polygon in red, thickness=2
+for pts in polygons:
+    pts = np.array(pts, dtype=np.int32)
+    cv2.polylines(annotated, [pts], isClosed=True, color=(0,0,255), thickness=2)
+
+# save out an annotated version
+out_img = os.path.splitext(IMAGE)[0] + "_annotated.png"
+cv2.imwrite(out_img, annotated)
+print(f"Wrote annotated image to {out_img}")
