@@ -47,6 +47,17 @@ def is_point_in_polygon(px, py, poly):
             inside = not inside
     return inside
 
+# 4b) Helper: compute intersection area between bounding box and polygon's bbox
+def intersection_area(poly, box):
+    # box = (xmin, ymin, xmax, ymax)
+    pxmin = max(min(p[0] for p in poly), box[0])
+    pymin = max(min(p[1] for p in poly), box[1])
+    pxmax = min(max(p[0] for p in poly), box[2])
+    pymax = min(max(p[1] for p in poly), box[3])
+    if pxmax <= pxmin or pymax <= pymin:
+        return 0
+    return (pxmax - pxmin) * (pymax - pymin)
+
 # 5) Gather all test images
 image_paths = sorted(glob.glob(os.path.join(TEST_FOLDER, "*.png")))
 if not image_paths:
@@ -81,42 +92,33 @@ for IMAGE in image_paths:
     detections = results.pandas().xyxy[0]
 
     # ── OPTIONAL DEBUG: draw detection centers in yellow ─────────────
-    annot = frame.copy()  # ensure annot exists before drawing
+    annot = frame.copy()
     for _, r in detections.iterrows():
         cx = int((r.xmin + r.xmax) / 2)
         cy = int((r.ymin + r.ymax) / 2)
         cv2.circle(annot, (cx, cy), 3, (0, 255, 255), -1)
     # ───────────────────────────────────────────────────────────────────
 
-    # 6e) Compute occupancy by testing center OR any corner inside the spot
+    # 6e) Compute occupancy using a 20% overlap threshold
     spot_status = []
     for spot in active_spots:
         occ = 0
         poly = spot["polygon"]
         for _, r in detections.iterrows():
             if r["name"] in ["car", "truck"]:
-                # 1) center point
-                cx, cy = (r.xmin + r.xmax) / 2, (r.ymin + r.ymax) / 2
-                if is_point_in_polygon(cx, cy, poly):
+                xmin, ymin, xmax, ymax = r.xmin, r.ymin, r.xmax, r.ymax
+                box_area = (xmax - xmin) * (ymax - ymin)
+                if box_area <= 0:
+                    continue
+                ov = intersection_area(poly, (xmin, ymin, xmax, ymax))
+                # require at least 20% of the bbox area overlapping the stall
+                if (ov / box_area) > 0.30:
                     occ = 1
-                else:
-                    # 2) corners
-                    corners = [
-                        (r.xmin, r.ymin),
-                        (r.xmin, r.ymax),
-                        (r.xmax, r.ymin),
-                        (r.xmax, r.ymax),
-                    ]
-                    for px, py in corners:
-                        if is_point_in_polygon(px, py, poly):
-                            occ = 1
-                            break
-                if occ:
                     break
         spot_status.append((spot["id"], occ))
     print("  Spot statuses:", spot_status)
 
-    # 6f) Visual debug overlay (unchanged, but draws on `annot`)
+    # 6f) Visual debug overlay
     for sid, occ in spot_status:
         poly = next(s["polygon"] for s in active_spots if s["id"] == sid)
         pts = np.array(poly, np.int32).reshape((-1,1,2))
@@ -124,13 +126,20 @@ for IMAGE in image_paths:
         cv2.polylines(annot, [pts], True, color, 2)
         M = cv2.moments(pts)
         if M["m00"] != 0:
-            cx = int(M["m10"]/M["m00"])
-            cy = int(M["m01"]/M["m00"])
+            cx = int(M["m10"] / M["m00"])
+            cy = int(M["m01"] / M["m00"])
             cv2.putText(annot, str(sid), (cx-10, cy+5),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
 
     cv2.imshow("Annotated", annot)
-    cv2.imwrite(f"annotated_final_{image_key}.png", annot)
+
+    # save into Test_Results subfolder
+    script_dir  = os.path.dirname(os.path.abspath(__file__))
+    results_dir = os.path.join(script_dir, "Test_Results")
+    out_name    = f"annotated_final_{image_key}.png"
+    out_path    = os.path.join(results_dir, out_name)
+    ok          = cv2.imwrite(out_path, annot)
+    print(f"  → Wrote annotated image to {out_path}: {ok}")
 
     # 6g) Update Google Sheets with exact match
     for sid, occ in spot_status:
