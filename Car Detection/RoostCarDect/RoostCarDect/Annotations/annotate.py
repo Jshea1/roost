@@ -4,8 +4,8 @@ import os
 import numpy as np
 
 # Path to your image and output JSON
-IMAGE   = "Annotations/cam_img/Spot_3/S3_180B.png"
-OUTPUT  = "Annotations/cam_img/Spot_3/S3_180B.json"
+IMAGE   = "Annotations/cam_img/Spot_3/Spot3_180F.jpg"
+OUTPUT  = "Annotations/cam_img/Spot_3/Spot3_180F.json"
 
 polygons = []      # will hold multiple spot polygons
 current = []       # current spot being clicked

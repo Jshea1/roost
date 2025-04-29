@@ -1,6 +1,6 @@
 import cv2
 
-RTSP_URL = "rtsp://admin:2025@ROOST11@169.254.109.34:681/Streaming/channels/103"
+RTSP_URL = "rtsp://admin:2025@ROOST11@169.254.109.34:681/Streaming/channels/101"
 cap = cv2.VideoCapture(RTSP_URL)
 ret, frame = cap.read()
 if not ret:
