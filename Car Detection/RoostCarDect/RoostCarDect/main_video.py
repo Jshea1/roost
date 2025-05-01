@@ -8,46 +8,46 @@ import pandas as pd
 import gspread
 from torchvision.ops import nms
 from google.oauth2.service_account import Credentials
-from all_spots import all_spots  # your master polygon list
+from all_spots import all_spots  # master polygon list
 
 # —————————————————————————————————————————————
 # CONFIGURATION
 # —————————————————————————————————————————————
-VIDEO_PATH          = os.path.join(os.path.dirname(__file__), "input_video.mp4")
-OUT_VIDEO_PATH      = os.path.join(os.path.dirname(__file__), "output_video.mp4")
-MAP_PATH            = os.path.join(os.path.dirname(__file__), "image_spot_map.json")
-JSON_KEY_FILE       = os.path.join(os.path.dirname(__file__), "test1roost-0c848c46550d.json")
-SPREADSHEET_ID      = "1Kb-Vu3I1DIRUix-8swzzwJcqiEAkBGkW8JaDrD7r4bo"
-DETECTION_INTERVAL  = 5   # seconds between detections
+VIDEO_PATH         = os.path.join(os.path.dirname(__file__), "input_video.mp4")
+OUT_VIDEO_PATH     = os.path.join(os.path.dirname(__file__), "output_video.mp4")
+MAP_PATH           = os.path.join(os.path.dirname(__file__), "image_spot_map.json")
+JSON_KEY_FILE      = os.path.join(os.path.dirname(__file__), "test1roost-0c848c46550d.json")
+SPREADSHEET_ID     = "1Kb-Vu3I1DIRUix-8swzzwJcqiEAkBGkW8JaDrD7r4bo"
+DETECTION_INTERVAL = 5  # seconds between re-runs of YOLO
 # —————————————————————————————————————————————
 
-# 1) Load the video→spot map once
+# 1) Load video→spot map
 video_key = os.path.splitext(os.path.basename(VIDEO_PATH))[0]
 with open(MAP_PATH) as f:
     image_map = json.load(f)
 active_ids = image_map.get(video_key, [])
 if not active_ids:
-    raise RuntimeError(f"No spot mapping found for video '{video_key}' in {MAP_PATH}")
+    raise RuntimeError(f"No spot mapping for '{video_key}' in {MAP_PATH}")
 
 # 2) Filter your master list once
 active_spots = [s for s in all_spots if s["id"] in active_ids]
 if not active_spots:
     raise RuntimeError(f"No polygons in all_spots.py for IDs {active_ids}")
 
-# 3) Initialize YOLOv5 model (only once)
+# 3) Initialize YOLOv5
 model = torch.hub.load('ultralytics/yolov5', 'yolov5l', pretrained=True)
-model.conf = 0.15   # lower confidence threshold
-model.iou  = 0.45   # NMS IoU threshold
+model.conf = 0.15
+model.iou  = 0.45
 
-# 4) Authenticate Google Sheets (once)
+# 4) Authenticate Google Sheets
 creds = Credentials.from_service_account_file(
     JSON_KEY_FILE,
     scopes=["https://www.googleapis.com/auth/spreadsheets"]
 )
 sheet = gspread.authorize(creds).open_by_key(SPREADSHEET_ID).sheet1
-colA = sheet.col_values(1)  # for exact matching
+colA  = sheet.col_values(1)
 
-# 5) Helpers
+# 5) Helper: area of overlap
 def intersection_area(poly, box):
     pxmin = max(min(p[0] for p in poly), box[0])
     pymin = max(min(p[1] for p in poly), box[1])
@@ -55,29 +55,41 @@ def intersection_area(poly, box):
     pymax = min(max(p[1] for p in poly), box[3])
     if pxmax <= pxmin or pymax <= pymin:
         return 0
-    return (pxmax - pxmin) * (pymax - pymin)
+    return (pxmax-pxmin)*(pymax-pymin)
 
-# 6) Open video & prepare writer
+# 6) Open video & prep writer
 cap = cv2.VideoCapture(VIDEO_PATH)
 if not cap.isOpened():
-    raise RuntimeError(f"Could not open video '{VIDEO_PATH}'")
+    raise RuntimeError(f"Could not open {VIDEO_PATH}")
 
 width  = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 fps    = cap.get(cv2.CAP_PROP_FPS) or 30.0
-
-# Calculate display delay (ms) to match video FPS
-delay = int(1000 / fps)
-
-# Calculate how many frames between detections
-frames_between    = int(fps * DETECTION_INTERVAL)
-prev_spot_status  = None
+delay  = int(1000/fps)
+frames_between = int(fps * DETECTION_INTERVAL)
+prev_status    = None
 
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 out    = cv2.VideoWriter(OUT_VIDEO_PATH, fourcc, fps, (width, height))
-
-# Create a resizable window for live preview
 cv2.namedWindow("Annotated Video", cv2.WINDOW_NORMAL)
+
+# 7) Split into top-half vs bottom-half spots
+top_spots    = []
+bottom_spots = []
+for s in active_spots:
+    ys = [p[1] for p in s["polygon"]]
+    if np.mean(ys) < height/2:
+        top_spots.append(s)
+    else:
+        bottom_spots.append(s)
+
+# 8) Precompute rotated versions of the bottom-half polygons
+rotated_spots = []
+for s in bottom_spots:
+    rot_poly = [(width - x, height - y) for (x, y) in s["polygon"]]
+    # reverse order so polylines close correctly
+    rot_poly.reverse()
+    rotated_spots.append({"id": s["id"], "polygon": rot_poly})
 
 frame_idx = 0
 while True:
@@ -87,104 +99,92 @@ while True:
     frame_idx += 1
     print(f"\n=== Frame {frame_idx} ===")
 
-    # Decide whether to run a fresh detection
-    do_detect = (prev_spot_status is None) or ((frame_idx - 1) % frames_between == 0)
+    # only re-run YOLO every DETECTION_INTERVAL seconds
+    do_detect = (prev_status is None) or ((frame_idx-1) % frames_between == 0)
 
     if do_detect:
-        # 6a) Manual TTA: original + 180° rotation
-
-        # -- original frame inference
+        # —— 1) detect top half on the normal frame
         rgb1  = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        res1  = model(rgb1, size=1280)
-        d1    = res1.pandas().xyxy[0]
+        r1    = model(rgb1, size=1280)
+        d1    = r1.pandas().xyxy[0]
 
-        # -- 180° rotated inference
-        rot180 = cv2.rotate(frame, cv2.ROTATE_180)
-        rgb2   = cv2.cvtColor(rot180, cv2.COLOR_BGR2RGB)
-        res2   = model(rgb2, size=1280)
-        d2     = res2.pandas().xyxy[0]
-
-        # map rotated detections back to original coords
-        mapped = []
-        for _, r in d2.iterrows():
-            mapped.append({
-                "xmin": width  - r.xmax,
-                "ymin": height - r.ymax,
-                "xmax": width  - r.xmin,
-                "ymax": height - r.ymin,
-                "confidence": r.confidence,
-                "name": r.name
-            })
-        d2m = pd.DataFrame(mapped)
-
-        # combine and run NMS
-        all_dets = pd.concat([d1, d2m], ignore_index=True)
-        boxes    = torch.tensor(all_dets[["xmin","ymin","xmax","ymax"]].values)
-        scores   = torch.tensor(all_dets.confidence.values)
-        keep     = nms(boxes, scores, iou_threshold=model.iou)
-        dets     = all_dets.iloc[keep].reset_index(drop=True)
-
-        # 6b) Compute occupancy per spot
-        spot_status = []
-        for spot in active_spots:
+        top_status = []
+        for spot in top_spots:
             occ = 0
-            poly = spot["polygon"]
-            for _, r in dets.iterrows():
-                if r["name"] in ("car", "truck"):
-                    xmin, ymin, xmax, ymax = r.xmin, r.ymin, r.xmax, r.ymax
-                    box_area = (xmax - xmin) * (ymax - ymin)
-                    if box_area <= 0:
-                        continue
-                    ov = intersection_area(poly, (xmin, ymin, xmax, ymax))
-                    if (ov / box_area) > 0.30:
+            for _, r in d1.iterrows():
+                if r["name"] in ("car","truck"):
+                    bx = (r.xmin, r.ymin, r.xmax, r.ymax)
+                    area = (r.xmax-r.xmin)*(r.ymax-r.ymin)
+                    if area>0 and intersection_area(spot["polygon"], bx)/area>0.30:
                         occ = 1
                         break
-            spot_status.append((spot["id"], occ))
-        print("  Detected statuses:", spot_status)
+            top_status.append((spot["id"], occ))
 
-        # 6c) Update Google Sheets
-        for sid, occ in spot_status:
-            sid_str = str(sid)
+        # —— 2) detect bottom half on the 180° rotated frame
+        rot180 = cv2.rotate(frame, cv2.ROTATE_180)
+        rgb2   = cv2.cvtColor(rot180, cv2.COLOR_BGR2RGB)
+        r2     = model(rgb2, size=1280)
+        d2     = r2.pandas().xyxy[0]
+
+        bottom_status = []
+        for spot in rotated_spots:
+            occ = 0
+            for _, r in d2.iterrows():
+                if r["name"] in ("car","truck"):
+                    bx = (r.xmin, r.ymin, r.xmax, r.ymax)
+                    area = (r.xmax-r.xmin)*(r.ymax-r.ymin)
+                    if area>0 and intersection_area(spot["polygon"], bx)/area>0.30:
+                        occ = 1
+                        break
+            bottom_status.append((spot["id"], occ))
+
+        # merge and save
+        prev_status = top_status + bottom_status
+
+        # update Google Sheets
+        for sid, occ in prev_status:
             try:
-                row = colA.index(sid_str) + 1
+                row = colA.index(str(sid))+1
                 sheet.update_cell(row, 2, occ)
             except ValueError:
-                print(f"    • Spot {sid} not in column A—skipping")
-            except Exception as e:
-                print(f"    ! Error updating spot {sid}: {e}")
-
-        prev_spot_status = spot_status
+                print(f" • ID {sid} not in sheet; skipping")
     else:
-        # reuse last-known results
-        spot_status = prev_spot_status
+        top_status = [s for s in prev_status if s[0] in {sp["id"] for sp in top_spots}]
+        bottom_status = [s for s in prev_status if s[0] in {sp["id"] for sp in bottom_spots}]
 
-    # 6d) Draw overlay on every frame
+    # —— draw all overlays onto the _original_ frame
     annot = frame.copy()
-    for sid, occ in spot_status:
-        poly  = next(s["polygon"] for s in active_spots if s["id"] == sid)
+    # top half
+    for sid, occ in top_status:
+        poly  = next(s["polygon"] for s in top_spots if s["id"]==sid)
         pts   = np.array(poly, np.int32).reshape((-1,1,2))
-        color = (0,0,255) if occ else (0,255,0)
-        cv2.polylines(annot, [pts], True, color, 2)
+        c     = (0,0,255) if occ else (0,255,0)
+        cv2.polylines(annot, [pts], True, c, 2)
         M = cv2.moments(pts)
-        if M["m00"] != 0:
-            cx = int(M["m10"]/M["m00"])
-            cy = int(M["m01"]/M["m00"])
-            cv2.putText(
-                annot, str(sid),
-                (cx-10, cy+5),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2
-            )
+        if M["m00"]!=0:
+            cx = int(M["m10"]/M["m00"]); cy=int(M["m01"]/M["m00"])
+            cv2.putText(annot, str(sid), (cx-10,cy+5),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, c, 2)
 
-    # 6e) Write & show
+    # bottom half (use the original polygon coords)
+    for sid, occ in bottom_status:
+        poly  = next(s["polygon"] for s in bottom_spots if s["id"]==sid)
+        pts   = np.array(poly, np.int32).reshape((-1,1,2))
+        c     = (0,0,255) if occ else (0,255,0)
+        cv2.polylines(annot, [pts], True, c, 2)
+        M = cv2.moments(pts)
+        if M["m00"]!=0:
+            cx = int(M["m10"]/M["m00"]); cy=int(M["m01"]/M["m00"])
+            cv2.putText(annot, str(sid), (cx-10,cy+5),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, c, 2)
+
     out.write(annot)
     cv2.imshow("Annotated Video", annot)
     if cv2.waitKey(delay) & 0xFF == ord('q'):
         break
+    time.sleep(0.02)
 
-    time.sleep(0.02)  # small throttle if desired
-
-# 7) Cleanup
 cap.release()
 out.release()
 cv2.destroyAllWindows()
-print(f"Finished! Output video at {OUT_VIDEO_PATH}")
+print("Done →", OUT_VIDEO_PATH)
