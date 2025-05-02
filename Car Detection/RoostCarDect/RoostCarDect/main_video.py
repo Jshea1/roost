@@ -13,8 +13,8 @@ from all_spots import all_spots  # master polygon list
 # —————————————————————————————————————————————
 # CONFIGURATION
 # —————————————————————————————————————————————
-VIDEO_PATH         = os.path.join(os.path.dirname(__file__), "input_video.mp4")
-OUT_VIDEO_PATH     = os.path.join(os.path.dirname(__file__), "output_video.mp4")
+VIDEO_PATH         = os.path.join(os.path.dirname(__file__), "input_video3.mp4")
+OUT_VIDEO_PATH     = os.path.join(os.path.dirname(__file__), "output_video3.mp4")
 MAP_PATH           = os.path.join(os.path.dirname(__file__), "image_spot_map.json")
 JSON_KEY_FILE      = os.path.join(os.path.dirname(__file__), "test1roost-0c848c46550d.json")
 SPREADSHEET_ID     = "1Kb-Vu3I1DIRUix-8swzzwJcqiEAkBGkW8JaDrD7r4bo"
@@ -141,13 +141,19 @@ while True:
         # merge and save
         prev_status = top_status + bottom_status
 
-        # update Google Sheets
+        # --- update Google Sheets with logging ---
         for sid, occ in prev_status:
+            sid_str = str(sid)
             try:
-                row = colA.index(str(sid))+1
+                row = colA.index(sid_str) + 1
                 sheet.update_cell(row, 2, occ)
+                print(f"  • Updated spot {sid} → {occ} (row {row})")
             except ValueError:
-                print(f" • ID {sid} not in sheet; skipping")
+                print(f"  • Spot {sid} not found in sheet; skipping")
+            except Exception as e:
+                print(f"  ! Error updating spot {sid}: {e}")
+
+
     else:
         top_status = [s for s in prev_status if s[0] in {sp["id"] for sp in top_spots}]
         bottom_status = [s for s in prev_status if s[0] in {sp["id"] for sp in bottom_spots}]
