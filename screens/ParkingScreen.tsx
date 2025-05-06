@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+
+  import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,7 +9,7 @@ import {
 } from "react-native";
 import { fetchGoogleSheetsData } from "../services/googleSheets";
 
-const spotPositions = [
+const spotPositions =  [
   { id: 47,  top: "19.5%",   left: "56.5%",  rotation: 0 },
   { id: 48,  top: "22%",     left: "56.5%",  rotation: 0 },
   { id: 49,  top: "24.63%",  left: "56.5%",  rotation: 0 },
@@ -130,16 +131,14 @@ const ParkingScreen: React.FC = () => {
       const sheetData = await fetchGoogleSheetsData();
       if (sheetData) {
         console.log("Raw Sheet Data:", sheetData);
-        const adjustedData = sheetData.slice(1);
-        setData(adjustedData);
+        // no more slice(1) here — we’ll just match by ID
+        setData(sheetData);
       }
       setLoading(false);
     };
 
     loadData();
-    // Refresh every 5 seconds
-    const interval = setInterval(loadData, 5000);
-
+    const interval = setInterval(loadData, 2000);
     return () => clearInterval(interval);
   }, []);
 
@@ -159,11 +158,9 @@ const ParkingScreen: React.FC = () => {
         style={styles.backgroundImage}
       >
         {spotPositions.map((spot) => {
-          // row[0] = spot number, row[1] = occupancy (1 or 0)
-          const occupancy =
-            data[spot.id - 1] && data[spot.id - 1][1]
-              ? data[spot.id - 1][1].trim()
-              : "0";
+          // find the row whose column-A matches this spot.id
+          const row = data.find(r => r[0].trim() === spot.id.toString());
+          const occupancy = row && row[1] ? row[1].trim() : "0";
           const isOccupied = occupancy === "1";
 
           return (
@@ -189,19 +186,9 @@ const ParkingScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  backgroundImage: {
-    flex: 1,
-    width: "100%",
-    height: "100%",
-  },
+  container: { flex: 1 },
+  centered: { flex: 1, justifyContent: "center", alignItems: "center" },
+  backgroundImage: { flex: 1, width: "100%", height: "100%" },
   spotContainer: {
     position: "absolute",
     width: 42,
@@ -210,17 +197,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  spotText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 10,
-  },
-  occupied: {
-    backgroundColor: "rgba(255, 0, 0, 0.7)", // Red for taken spots
-  },
-  available: {
-    backgroundColor: "rgba(0, 128, 0, 0.7)", // Green for available spots
-  },
+  spotText: { color: "#fff", fontWeight: "bold", fontSize: 10 },
+  occupied: { backgroundColor: "rgba(255, 0, 0, 0.7)" },
+  available: { backgroundColor: "rgba(0, 128, 0, 0.7)" },
 });
 
 export default ParkingScreen;
