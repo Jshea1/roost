@@ -75,3 +75,8 @@ yarn-error.log
 !.yarn/versions
 
 **/test1roost-0c848c46550d.json
+
+# Expo
+.expo
+dist/
+web-build/

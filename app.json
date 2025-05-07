@@ -1,4 +1,36 @@
 {
-  "name": "roost",
-  "displayName": "roost"
+  "expo": {
+    "name": "ROOST",                        
+    "slug": "roost",                        
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",           
+    "scheme": "roost",                     
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "owner": "jcwilson11",                 
+    "extra": {
+      "eas": {
+        "projectId": "d99e48cd-2ee7-4420-9601-b2ce1c07d982"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "com.jcwilson11.roost",
+      "buildNumber": "1.0.0"
+    },
+    "android": {
+      "package": "com.jcwilson11.roost",
+      "versionCode": 1
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "assetBundlePatterns": ["**/*"],
+    "plugins": [
+      "expo-splash-screen"
+    ]
+  }
 }

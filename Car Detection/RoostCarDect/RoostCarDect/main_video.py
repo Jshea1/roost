@@ -13,8 +13,8 @@ from all_spots import all_spots  # master polygon list
 # —————————————————————————————————————————————
 # CONFIGURATION
 # —————————————————————————————————————————————
-VIDEO_PATH         = os.path.join(os.path.dirname(__file__), "input_video3.mp4")
-OUT_VIDEO_PATH     = os.path.join(os.path.dirname(__file__), "output_video3.mp4")
+VIDEO_PATH         = os.path.join(os.path.dirname(__file__), "test2_f.mp4")
+OUT_VIDEO_PATH     = os.path.join(os.path.dirname(__file__), "test2_foutput_video.mp4")
 MAP_PATH           = os.path.join(os.path.dirname(__file__), "image_spot_map.json")
 JSON_KEY_FILE      = os.path.join(os.path.dirname(__file__), "test1roost-0c848c46550d.json")
 SPREADSHEET_ID     = "1Kb-Vu3I1DIRUix-8swzzwJcqiEAkBGkW8JaDrD7r4bo"
