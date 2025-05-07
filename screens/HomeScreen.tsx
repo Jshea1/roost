@@ -33,12 +33,12 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const [showDirections, setShowDirections] = useState(false);
 
   const pins = [
-    { id: 1, top: '82%', left: '30%', name: 'Babbio\nGarage' },
-    { id: 2, top: '67%', left: '80%', name: 'River Lot' },
-    { id: 3, top: '30%', left: '25%', name: '8th St Lot' },
+    { id: 1, top: '78%', left: '39%', name: 'Babbio\nGarage' },
+    { id: 2, top: '64%', left: '77%', name: 'River Lot' },
+    { id: 3, top: '32%', left: '30%', name: '8th St Lot' },
     { id: 4, top: '16%', left: '70%', name: 'North\nLot' },
-    { id: 5, top: '1%',  left: '82%', name: 'Castle Point\nHall Lot' },
-    { id: 6, top: '32%', left: '89%', name: 'Howe\nCenter\nLot' },
+    { id: 5, top: '3%',  left: '75%', name: 'Castle Point\nHall Lot' },
+    { id: 6, top: '33%', left: '84%', name: 'Howe\nCenter\nLot' },
   ];
 
   // 2) Open the native maps app at the exact spot
