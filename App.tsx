@@ -19,7 +19,7 @@ export default function App(): React.JSX.Element {
           name="ROOST" 
           component={HomeScreen} 
           options={{
-            title: 'STEVENS ROOST',  
+            title: 'ROOST',  
             headerTitleAlign: 'center', 
             headerStyle: {
               backgroundColor: '#8B0000', 
