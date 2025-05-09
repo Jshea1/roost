@@ -22,19 +22,20 @@ from all_spots_videos import all_spots as video_spots_list
 JSON_KEY_FILE    = os.path.join(os.path.dirname(__file__), "test1roost-0c848c46550d.json")
 SPREADSHEET_ID   = "1Kb-Vu3I1DIRUix-8swzzwJcqiEAkBGkW8JaDrD7r4bo"
 YOLO_MODEL       = 'yolov5l'
-YOLO_CONF_THRESH = 0.15
+YOLO_CONF_THRESH = 0.10
 YOLO_IOU_THRESH  = 0.45
 DETECTION_INTERVAL = 5     # seconds between detections in video
 IMAGE_PAUSE      = 1000    # ms to display each image
 CYCLE_PAUSE      = 8.0     # seconds after each full cycle
 # Path to your logo to display during rest
 LOGO_PATH        = os.path.join(os.path.dirname(__file__), 'roost_icon.png')
+# Path to Haar cascade for face detection
+FACE_CASCADE_XML = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
 
 # —————————————————————————————————————————————
 # INITIALIZATION
 # —————————————————————————————————————————————
 def fix_winding(poly):
-    # turn your list of points into a convex hull with consistent order
     arr = np.array(poly, np.int32)
     hull = cv2.convexHull(arr)
     return hull.reshape(-1, 2).tolist()
@@ -43,7 +44,6 @@ with open(IMAGE_MAP_PATH) as f:
     image_map = json.load(f)
 with open(VIDEO_MAP_PATH) as f:
     video_map = json.load(f)
-
 for spot in video_spots_list:
     spot["polygon"] = fix_winding(spot["polygon"])
 for spot in image_spots_list:
@@ -52,7 +52,6 @@ for spot in image_spots_list:
 model = torch.hub.load('ultralytics/yolov5', YOLO_MODEL, pretrained=True)
 model.conf = YOLO_CONF_THRESH
 model.iou  = YOLO_IOU_THRESH
-
 creds = Credentials.from_service_account_file(
     JSON_KEY_FILE,
     scopes=["https://www.googleapis.com/auth/spreadsheets"]
@@ -60,10 +59,11 @@ creds = Credentials.from_service_account_file(
 sheet = gspread.authorize(creds).open_by_key(SPREADSHEET_ID).sheet1
 colA  = sheet.col_values(1)
 
-# Load logo image once
+# Load logo and face detector
 logo = cv2.imread(LOGO_PATH)
 if logo is None:
     raise FileNotFoundError(f"Logo not found at {LOGO_PATH}")
+face_cascade = cv2.CascadeClassifier(FACE_CASCADE_XML)
 
 # Create resizable window
 WINDOW_NAME = "Annotated Demo"
@@ -81,7 +81,6 @@ def intersection_area(poly, box):
         return 0
     return (pxmax - pxmin) * (pymax - pymin)
 
-# Batch update to avoid rate limits
 def batch_update_sheet(statuses):
     updates = []
     for sid, occ in statuses:
@@ -97,9 +96,44 @@ def batch_update_sheet(statuses):
         body = {"valueInputOption": "USER_ENTERED", "data": updates}
         sheet.spreadsheet.values_batch_update(body)
 
-# Draw overlay for frame & statuses
+# Redact faces by blurring
+def redact_faces(img):
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    # scaleFactor 1.1 → 1.05, minNeighbors 5 → 3
+    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=3)
+    for (x,y,w,h) in faces:
+        roi = img[y:y+h, x:x+w]
+        blur = cv2.GaussianBlur(roi, (99,99), 30)
+        img[y:y+h, x:x+w] = blur
+    return img
+
+
+# Redact entire people by blurring using YOLO person detection
+def redact_people(img):
+    # temporarily lower the confidence & enable TTA
+    old_conf = model.conf
+    model.conf = 0.05
+    rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    results = model(rgb, size=1280, augment=True)
+    # restore your normal threshold
+    model.conf = old_conf
+
+    df = results.pandas().xyxy[0]
+    for _, r in df.iterrows():
+        if r['name'] == 'person':
+            x1, y1, x2, y2 = map(int, (r.xmin, r.ymin, r.xmax, r.ymax))
+            roi = img[y1:y2, x1:x2]
+            blur = cv2.GaussianBlur(roi, (99,99), 30)
+            img[y1:y2, x1:x2] = blur
+    return img
+
+
+# Draw overlay for frame & statuses and redact faces + people
 def show_overlay(frame, statuses, spots):
-    annot = frame.copy()
+    # apply people blur first, then face blur for any missed areas
+    redacted = redact_people(frame.copy())
+    redacted = redact_faces(redacted)
+    annot = redacted.copy()
     for sid, occ in statuses:
         poly = next((s['polygon'] for s in spots if s['id']==sid), None)
         if not poly:
