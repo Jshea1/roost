@@ -104,6 +104,26 @@ Each entry must include:
     '''
 
 
+def inflate_polygon(poly, scale=1.1):
+    # poly: list of (x,y)
+    cx = sum(x for x,y in poly)/len(poly)
+    cy = sum(y for x,y in poly)/len(poly)
+    inflated = []
+    for x, y in poly:
+        # move each vertex away from centroid
+        nx = cx + (x - cx)*scale
+        ny = cy + (y - cy)*scale
+        inflated.append([int(nx), int(ny)])
+    return inflated
+
+# Example: in your all_spots_videos.py, replace each trouble spot with an inflated version:
+all_spots_videos = [
+  {
+    "id": 38,
+    "polygon": inflate_polygon([[1641,488],[1624,254],[1774,353],[1840,584]], scale=1.1)
+  },
+  # …
+]
 
 
 all_spots = [
@@ -145,15 +165,15 @@ all_spots = [
 },
 {
     "id": 38,
-    "polygon": [[1641, 488], [1624, 254], [1774, 353], [1771, 584]]
+    "polygon": inflate_polygon([[1641, 488], [1624, 254], [1774, 353], [1840, 584]], scale=1.2)
 },
 {
     "id": 39,
-    "polygon": [[1818, 694], [1836, 871], [1998, 869], [1969, 729]]
+    "polygon": [[1850, 660], [1850, 940], [1998, 940], [1969, 729]],
 },
 {
     "id": 40,
-    "polygon": [[1848, 964], [1836, 1180], [1981, 1130], [1996, 983]]
+    "polygon": [[1848, 950], [1836, 1180], [2000, 1130], [2000, 950]],
 },
 {
     "id": 41,
