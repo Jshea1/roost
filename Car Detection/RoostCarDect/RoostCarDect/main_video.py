@@ -8,7 +8,7 @@ import pandas as pd
 import gspread
 from torchvision.ops import nms
 from google.oauth2.service_account import Credentials
-from all_spots import all_spots  # master polygon list
+from all_spots_images import all_spots  # master polygon list
 
 # —————————————————————————————————————————————
 # CONFIGURATION

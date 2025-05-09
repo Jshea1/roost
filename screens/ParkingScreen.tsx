@@ -130,8 +130,7 @@ const ParkingScreen: React.FC = () => {
     const loadData = async () => {
       const sheetData = await fetchGoogleSheetsData();
       if (sheetData) {
-        console.log("Raw Sheet Data:", sheetData);
-        // no more slice(1) here — we’ll just match by ID
+        //console.log("Raw Sheet Data:", sheetData);
         setData(sheetData);
       }
       setLoading(false);

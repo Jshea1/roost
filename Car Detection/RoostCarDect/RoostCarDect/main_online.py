@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
-from all_spots import all_spots  # your master polygon list
+from all_spots_images import all_spots  # your master polygon list
 
 # —————————————————————————————————————————————
 # CONFIGURATION
